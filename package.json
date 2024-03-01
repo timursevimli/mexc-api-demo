@@ -13,11 +13,12 @@
   ],
   "author": "Nl",
   "license": "MIT",
-  "files": [
-    "src/**/*"
-  ],
   "execMap": {
     "js": "node –harmony"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timursevimli/mexc-api-demo.git"
   },
   "dependencies": {
     "axios": "^1.6.7",
