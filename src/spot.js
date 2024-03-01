@@ -1,4 +1,4 @@
-const APIBase = require('./APIBase.js');
+const APIBase = require('./apibase.js');
 const modules = require('./modules');
 const { flowRight } = require('./helpers/utils.js');
 
