@@ -1,5 +1,12 @@
-const CryptoJS = require('crypto-js');
-const { removeEmptyValue, buildQueryString, createRequest, CreateRequest, pubRequest, defaultLogger } = require('./helpers/utils.js');
+const crypto = require('node:crypto');
+const {
+  removeEmptyValue,
+  buildQueryString,
+  createRequest,
+  CreateRequest,
+  pubRequest,
+  defaultLogger,
+} = require('./helpers/utils.js');
 
 class APIBase {
   constructor(options) {
@@ -29,7 +36,8 @@ class APIBase {
     const timestamp = Date.now();
     let queryString = buildQueryString({ ...params, timestamp });
     queryString = queryString.replace(/\(/g, '%28').replace(/\)/g, '%29');
-    const signature = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA256(queryString, this.apiSecret));
+    const hmac = crypto.createHmac('sha256', this.apiSecret).update(queryString);
+    const signature = hmac.digest('hex');
     return createRequest({
       method,
       baseURL: this.baseURL,
@@ -67,7 +75,8 @@ class APIBase {
       path = `${path}?${queryString}`;
       objectString += queryString;
     }
-    const Signature = CryptoJS.enc.Hex.stringify(CryptoJS.HmacSHA256(objectString, this.apiSecret));
+    const hmac = crypto.createHmac('sha256', this.apiSecret).update(objectString);
+    const Signature = hmac.digest('hex');
     return CreateRequest({
       method,
       baseURL: this.baseURL,
