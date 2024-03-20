@@ -4,8 +4,8 @@ const WebSocket = require('ws');
 
 const WS_URL = 'wss://wbs.mexc.com/ws';
 
-const RECONN_INTERVAL = 5000;
 const PING_INTERVAL = 20_000;
+const WAIT_ON_CONNECTION_ERROR = 5_000;
 
 // https://www.rfc-editor.org/rfc/rfc6455.html#section-7.4.1
 const NORMAL_CLOSE_CODE = 1000;
@@ -31,29 +31,26 @@ const send = (socket, param) => {
 };
 
 const webSocketApi = async () => {
-  let socket = await createConnection();
+  let socket = null;
+  let reconnecting = true;
 
   const listeners = [];
   const params = [];
-  let messageCount = 0;
 
-  const reconnInit = () => {
-    for (const param of params) send(socket, param);
-    socket.on('message', (chunk) => {
-      messageCount++;
-      const data = JSON.parse(chunk.toString('utf8'));
-      for (const listener of listeners) listener(data);
-    });
+  const connectionInit = async () => {
+    if (!reconnecting) return;
+    try {
+      socket = await createConnection();
+      for (const param of params) send(socket, param);
+      socket.on('close', connectionInit);
+      socket.on('message', (chunk) => {
+        const data = JSON.parse(chunk.toString('utf8'));
+        for (const listener of listeners) listener(data);
+      });
+    } catch {
+      setTimeout(connectionInit, WAIT_ON_CONNECTION_ERROR);
+    }
   };
-
-  let reconnInterval = setInterval(() => {
-    socket.close(NORMAL_CLOSE_CODE);
-    createConnection().then((connection) => {
-      socket = connection;
-      reconnInit();
-      console.log('Socket reconnected and listeners binded');
-    });
-  }, RECONN_INTERVAL);
 
   let pingInterval = setInterval(() => {
     socket.send('{"method":"PING"}');
@@ -66,33 +63,37 @@ const webSocketApi = async () => {
       socket.close(NORMAL_CLOSE_CODE);
       stream.end();
     }
-  });
+  }, 0);
 
-  reconnInit();
+  connectionInit();
 
   return {
     deals(symbols = 'BTCUSDT', cb = null) {
+      if (!cb) return;
       const param = `spot@public.deals.v3.api@${symbols}`;
       const listener = (data) => void cb(data);
       listeners.push(listener);
       params.push(param);
       send(socket, param);
     },
-    kline(symbols, min, cb) {
+    kline(symbols, min, cb = null) {
+      if (!cb) return;
       const param = `spot@public.kline.v4.api@${symbols}@Min${min}`;
       const listener = (data) => void cb(data);
       listeners.push(listener);
       params.push(param);
       send(socket, param);
     },
-    increaseDepth(symbols, cb) {
+    increaseDepth(symbols, cb = null) {
+      if (!cb) return;
       const param = `spot@public.increase.depth.v3.api@${symbols}`;
       const listener = (data) => void cb(data);
       listeners.push(listener);
       params.push(param);
       send(socket, param);
     },
-    limitDepth(symbols, depth, cb) {
+    limitDepth(symbols, depth, cb = null) {
+      if (!cb) return;
       const param = `spot@public.limit.depth.v3.api@${symbols}@${depth}`;
       const listener = (data) => void cb(data);
       listeners.push(listener);
@@ -111,6 +112,7 @@ const webSocketApi = async () => {
       send(socket, param);
     },
     close(cb = null) {
+      reconnecting = false;
       if (cb) socket.on('close', cb);
       if (pingInterval) {
         clearInterval(pingInterval);
