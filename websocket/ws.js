@@ -31,7 +31,7 @@ const send = (socket, param) => {
 };
 
 const webSocketApi = async () => {
-  let socket = null;
+  let socket = await createConnection();
   let reconnecting = true;
 
   const listeners = [];
