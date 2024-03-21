@@ -59,11 +59,18 @@ const webSocketApi = async () => {
   setTimeout(() => {
     if (listeners.length === 0 && params.length === 0) {
       clearInterval(pingInterval);
-      clearInterval(reconnInterval);
       socket.close(NORMAL_CLOSE_CODE);
-      stream.end();
     }
   }, 0);
+
+  const executor = (listener, param) => {
+    const exec = (data = {}) => {
+      if (data.c === param) listener(data);
+    };
+    listeners.push(exec);
+    params.push(param);
+    send(socket, param);
+  };
 
   connectionInit();
 
@@ -71,45 +78,38 @@ const webSocketApi = async () => {
     deals(symbols = 'BTCUSDT', cb = null) {
       if (!cb) return;
       const param = `spot@public.deals.v3.api@${symbols}`;
-      const listener = (data) => void cb(data);
-      listeners.push(listener);
-      params.push(param);
-      send(socket, param);
+      executor(cb, param);
     },
     kline(symbols, min, cb = null) {
       if (!cb) return;
       const param = `spot@public.kline.v4.api@${symbols}@Min${min}`;
-      const listener = (data) => void cb(data);
-      listeners.push(listener);
-      params.push(param);
-      send(socket, param);
+      executor(cb, param);
     },
     increaseDepth(symbols, cb = null) {
       if (!cb) return;
       const param = `spot@public.increase.depth.v3.api@${symbols}`;
-      const listener = (data) => void cb(data);
-      listeners.push(listener);
-      params.push(param);
-      send(socket, param);
+      executor(cb, param);
     },
     limitDepth(symbols, depth, cb = null) {
       if (!cb) return;
       const param = `spot@public.limit.depth.v3.api@${symbols}@${depth}`;
-      const listener = (data) => void cb(data);
-      listeners.push(listener);
-      params.push(param);
-      send(socket, param);
+      executor(cb, param);
+    },
+    miniTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
+      if (!cb) return;
+      const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
+      executor(cb, param);
+    },
+    priceTicker(symbols = 'BTCUSDT', cb = null) {
+      if (!cb) return;
+      this.miniTicker(symbols, 'UTC+3', (data) => {
+        cb({ price: data.d.p, symbol: data.s });
+      });
     },
     bookTicker(symbols = 'BTCUSDT', cb = null) {
       if (!cb) return;
       const param = `spot@public.bookTicker.v3.api@${symbols}`;
-      const listener = (data = {}) => {
-        const { c, d, s } = data;
-        if (c === param) cb({ price: d.a, symbol: s });
-      };
-      listeners.push(listener);
-      params.push(param);
-      send(socket, param);
+      executor(cb, param);
     },
     close(cb = null) {
       reconnecting = false;
@@ -118,12 +118,7 @@ const webSocketApi = async () => {
         clearInterval(pingInterval);
         pingInterval = null;
       }
-      if (reconnInterval) {
-        clearInterval(reconnInterval);
-        reconnInterval = null;
-      }
       socket.close(NORMAL_CLOSE_CODE);
-      stream.end();
     }
   };
 };
