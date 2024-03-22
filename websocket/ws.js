@@ -34,18 +34,22 @@ const webSocketApi = async () => {
   let socket = await createConnection();
   let reconnecting = true;
 
-  const listeners = [];
-  const params = [];
+  const listeners = {};
 
   const connectionInit = async () => {
     if (!reconnecting) return;
     try {
       socket = await createConnection();
+      const params = Object.keys(listeners);
       for (const param of params) send(socket, param);
       socket.on('close', connectionInit);
       socket.on('message', (chunk) => {
         const data = JSON.parse(chunk.toString('utf8'));
-        for (const listener of listeners) listener(data);
+        const channel = data.c;
+        if (channel) {
+          const listener = listeners[channel];
+          if (listener) listener(data);
+        }
       });
     } catch {
       setTimeout(connectionInit, WAIT_ON_CONNECTION_ERROR);
@@ -63,12 +67,8 @@ const webSocketApi = async () => {
     }
   }, 0);
 
-  const executor = (listener, param) => {
-    const exec = (data = {}) => {
-      if (data.c === param) listener(data);
-    };
-    listeners.push(exec);
-    params.push(param);
+  const addListener = (listener, param) => {
+    listeners[param] = listener;
     send(socket, param);
   };
 
@@ -78,27 +78,27 @@ const webSocketApi = async () => {
     deals(symbols = 'BTCUSDT', cb = null) {
       if (!cb) return;
       const param = `spot@public.deals.v3.api@${symbols}`;
-      executor(cb, param);
+      addListener(cb, param);
     },
     kline(symbols, min, cb = null) {
       if (!cb) return;
       const param = `spot@public.kline.v4.api@${symbols}@Min${min}`;
-      executor(cb, param);
+      addListener(cb, param);
     },
     increaseDepth(symbols, cb = null) {
       if (!cb) return;
       const param = `spot@public.increase.depth.v3.api@${symbols}`;
-      executor(cb, param);
+      addListener(cb, param);
     },
     limitDepth(symbols, depth, cb = null) {
       if (!cb) return;
       const param = `spot@public.limit.depth.v3.api@${symbols}@${depth}`;
-      executor(cb, param);
+      addListener(cb, param);
     },
     miniTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
       if (!cb) return;
       const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
-      executor(cb, param);
+      addListener(cb, param);
     },
     priceTicker(symbols = 'BTCUSDT', cb = null) {
       if (!cb) return;
@@ -109,7 +109,7 @@ const webSocketApi = async () => {
     bookTicker(symbols = 'BTCUSDT', cb = null) {
       if (!cb) return;
       const param = `spot@public.bookTicker.v3.api@${symbols}`;
-      executor(cb, param);
+      addListener(cb, param);
     },
     close(cb = null) {
       reconnecting = false;
