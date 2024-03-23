@@ -100,9 +100,9 @@ const webSocketApi = async () => {
       const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
       addListener(cb, param);
     },
-    priceTicker(symbols = 'BTCUSDT', cb = null) {
+    priceTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
       if (!cb) return;
-      this.miniTicker(symbols, 'UTC+3', (data) => {
+      this.miniTicker(symbols, tz, (data) => {
         cb({ price: data.d.p, symbol: data.s });
       });
     },
