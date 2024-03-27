@@ -3,7 +3,7 @@
 ## Installation
 
 ```
-npm install 
+npm install @tsevimli/mexc
 ```
 
 ## RESTful APIs
