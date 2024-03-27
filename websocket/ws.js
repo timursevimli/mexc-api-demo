@@ -46,11 +46,12 @@ class WebSocketApi {
   }
 
   #send(param) {
+    if (!this.socket) return;
     const data = JSON.stringify({
       'method': 'SUBSCRIPTION',
       'params': [param],
     });
-    if (this.socket) this.socket.send(data);
+    this.socket.send(data);
   }
 
   async connect() {
