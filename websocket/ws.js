@@ -1,5 +1,6 @@
 'use strict';
 
+const { setTimeout } = require('timers/promises');
 const WebSocket = require('ws');
 
 const WS_URL = 'wss://wbs.mexc.com/ws';
@@ -22,108 +23,114 @@ const createConnection = () =>
     });
   });
 
-const send = (socket, param) => {
-  const data = {
-    'method': 'SUBSCRIPTION',
-    'params': [param],
-  };
-  socket.send(JSON.stringify(data));
-};
+class WebSocketApi {
+  #pingInterval = null;
+  #reconnect = true;
+  #sendQueue = [];
 
-const webSocketApi = async () => {
-  let socket = await createConnection();
-  let reconnecting = true;
+  constructor() {
+    this.listeners = {};
+    this.socket = null;
+    this.#reconnect = true;
+    this.#pingInterval = null;
+    this.#sendQueue = [];
+  }
 
-  const listeners = {};
+  #ping() {
+    this.#pingInterval = setInterval(() => {
+      this.socket.send('{"method":"PING"}');
+    }, PING_INTERVAL);
+  }
 
-  const connectionInit = async () => {
-    if (!reconnecting) return;
+  #addListener(listener, param) {
+    this.listeners[param] = listener;
+    this.#send(param);
+  }
+
+  #send(param) {
+    const data = JSON.stringify({
+      'method': 'SUBSCRIPTION',
+      'params': [param],
+    });
+    if (this.socket) this.socket.send(data);
+  }
+
+  async connect() {
+    if (!this.#reconnect) return;
     try {
-      socket = await createConnection();
-      const params = Object.keys(listeners);
-      for (const param of params) send(socket, param);
-      socket.on('close', connectionInit);
-      socket.on('message', (chunk) => {
+      this.socket = await createConnection();
+      this.#ping();
+      const params = Object.keys(this.listeners);
+      for (const param of params) this.#send(param);
+      this.socket.on('close', this.connect.bind(this));
+      this.socket.on('message', (chunk) => {
         const data = JSON.parse(chunk.toString('utf8'));
         const channel = data.c;
-        if (channel) {
-          const listener = listeners[channel];
-          if (listener) listener(data);
-        }
+        if (!channel) return;
+        const listener = this.listeners[channel];
+        if (listener) listener(data);
       });
-    } catch {
-      setTimeout(connectionInit, WAIT_ON_CONNECTION_ERROR);
+    } catch (err) {
+      await setTimeout(WAIT_ON_CONNECTION_ERROR);
+      return await this.connect();
     }
-  };
+  }
 
-  let pingInterval = setInterval(() => {
-    socket.send('{"method":"PING"}');
-  }, PING_INTERVAL);
+  deals(symbols = 'BTCUSDT', cb = null) {
+    if (!cb) return;
+    const param = `spot@public.deals.v3.api@${symbols}`;
+    this.#addListener(cb, param);
+  }
 
-  setTimeout(() => {
-    if (listeners.length === 0 && params.length === 0) {
-      clearInterval(pingInterval);
-      socket.close(NORMAL_CLOSE_CODE);
+  kline(symbols, min, cb = null) {
+    if (!cb) return;
+    const param = `spot@public.kline.v4.api@${symbols}@Min${min}`;
+    this.#addListener(cb, param);
+  }
+
+  increaseDepth(symbols, cb = null) {
+    if (!cb) return;
+    const param = `spot@public.increase.depth.v3.api@${symbols}`;
+    this.#addListener(cb, param);
+  }
+
+  limitDepth(symbols, depth, cb = null) {
+    if (!cb) return;
+    const param = `spot@public.limit.depth.v3.api@${symbols}@${depth}`;
+    this.#addListener(cb, param);
+  }
+
+  miniTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
+    if (!cb) return;
+    const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
+    this.#addListener(cb, param);
+  }
+
+  priceTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
+    if (!cb) return;
+    this.miniTicker(symbols, tz, (data) => {
+      cb({ price: data.d.p, symbol: data.s });
+    });
+  }
+
+  bookTicker(symbols = 'BTCUSDT', cb = null) {
+    if (!cb) return;
+    const param = `spot@public.bookTicker.v3.api@${symbols}`;
+    this.#addListener(cb, param);
+  }
+
+  close(cb = null) {
+    this.#reconnect = false;
+    if (cb) this.socket.on('close', cb);
+    if (this.#pingInterval) {
+      clearInterval(this.#pingInterval);
+      this.#pingInterval = null;
     }
-  }, 0);
+    this.socket.close(NORMAL_CLOSE_CODE);
+  }
+}
 
-  const addListener = (listener, param) => {
-    listeners[param] = listener;
-    send(socket, param);
-  };
-
-  connectionInit();
-
-  return {
-    deals(symbols = 'BTCUSDT', cb = null) {
-      if (!cb) return;
-      const param = `spot@public.deals.v3.api@${symbols}`;
-      addListener(cb, param);
-    },
-    kline(symbols, min, cb = null) {
-      if (!cb) return;
-      const param = `spot@public.kline.v4.api@${symbols}@Min${min}`;
-      addListener(cb, param);
-    },
-    increaseDepth(symbols, cb = null) {
-      if (!cb) return;
-      const param = `spot@public.increase.depth.v3.api@${symbols}`;
-      addListener(cb, param);
-    },
-    limitDepth(symbols, depth, cb = null) {
-      if (!cb) return;
-      const param = `spot@public.limit.depth.v3.api@${symbols}@${depth}`;
-      addListener(cb, param);
-    },
-    miniTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
-      if (!cb) return;
-      const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
-      addListener(cb, param);
-    },
-    priceTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
-      if (!cb) return;
-      this.miniTicker(symbols, tz, (data) => {
-        cb({ price: data.d.p, symbol: data.s });
-      });
-    },
-    bookTicker(symbols = 'BTCUSDT', cb = null) {
-      if (!cb) return;
-      const param = `spot@public.bookTicker.v3.api@${symbols}`;
-      addListener(cb, param);
-    },
-    close(cb = null) {
-      reconnecting = false;
-      if (cb) socket.on('close', cb);
-      if (pingInterval) {
-        clearInterval(pingInterval);
-        pingInterval = null;
-      }
-      socket.close(NORMAL_CLOSE_CODE);
-    }
-  };
-};
-
-module.exports = webSocketApi;
+module.exports = WebSocketApi;
 
 // ws.onopen = () => {
 //   console.log('Connection open');
