@@ -26,14 +26,12 @@ const createConnection = () =>
 class WebSocketApi {
   #pingInterval = null;
   #reconnect = true;
-  #sendQueue = [];
 
   constructor() {
     this.listeners = {};
     this.socket = null;
     this.#reconnect = true;
     this.#pingInterval = null;
-    this.#sendQueue = [];
   }
 
   #ping() {
@@ -70,7 +68,7 @@ class WebSocketApi {
         const listener = this.listeners[channel];
         if (listener) listener(data);
       });
-    } catch (err) {
+    } catch {
       await setTimeout(WAIT_ON_CONNECTION_ERROR);
       return await this.connect();
     }
