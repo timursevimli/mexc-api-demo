@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
-const { setTimeout } = require('timers/promises');
-const WebSocket = require('ws');
+const { setTimeout } = require("timers/promises");
+const WebSocket = require("ws");
 
-const WS_URL = 'wss://wbs.mexc.com/ws';
+const WS_URL = "wss://wbs.mexc.com/ws";
 
 const PING_INTERVAL = 20_000;
 const WAIT_ON_CONNECTION_ERROR = 5_000;
@@ -14,8 +14,8 @@ const NORMAL_CLOSE_CODE = 1000;
 const createConnection = () =>
   new Promise((resolve, reject) => {
     const socket = new WebSocket(WS_URL);
-    socket.once('error', reject);
-    socket.once('open', () => {
+    socket.once("error", reject);
+    socket.once("open", () => {
       const isOpened = socket.readyState === WebSocket.OPEN;
       if (isOpened) return void resolve(socket);
       const message = `Connection server error, state: ${socket.readyState}`;
@@ -48,8 +48,8 @@ class WebSocketApi {
   #send(param) {
     if (!this.socket) return;
     const data = JSON.stringify({
-      'method': 'SUBSCRIPTION',
-      'params': [param],
+      method: "SUBSCRIPTION",
+      params: [param],
     });
     this.socket.send(data);
   }
@@ -61,9 +61,9 @@ class WebSocketApi {
       this.#ping();
       const params = Object.keys(this.listeners);
       for (const param of params) this.#send(param);
-      this.socket.on('close', this.connect.bind(this));
-      this.socket.on('message', (chunk) => {
-        const data = JSON.parse(chunk.toString('utf8'));
+      this.socket.on("close", this.connect.bind(this));
+      this.socket.on("message", (chunk) => {
+        const data = JSON.parse(chunk.toString("utf8"));
         const channel = data.c;
         if (!channel) return;
         const listener = this.listeners[channel];
@@ -75,7 +75,7 @@ class WebSocketApi {
     }
   }
 
-  deals(symbols = 'BTCUSDT', cb = null) {
+  deals(symbols = "BTCUSDT", cb = null) {
     if (!cb) return;
     const param = `spot@public.deals.v3.api@${symbols}`;
     this.#addListener(cb, param);
@@ -99,28 +99,29 @@ class WebSocketApi {
     this.#addListener(cb, param);
   }
 
-  miniTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
+  miniTicker(symbols = "BTCUSDT", tz = "UTC+3", cb = null) {
     if (!cb) return;
     const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
     this.#addListener(cb, param);
   }
 
-  priceTicker(symbols = 'BTCUSDT', tz = 'UTC+3', cb = null) {
+  priceTicker(symbols = "BTCUSDT", tz = "UTC+3", cb = null) {
     if (!cb) return;
     this.miniTicker(symbols, tz, (data) => {
       cb({ price: data.d.p, symbol: data.s });
     });
   }
 
-  bookTicker(symbols = 'BTCUSDT', cb = null) {
+  bookTicker(symbols = "BTCUSDT", cb = null) {
     if (!cb) return;
     const param = `spot@public.bookTicker.v3.api@${symbols}`;
     this.#addListener(cb, param);
   }
 
   close(cb = null) {
+    if (!this.socket) return;
     this.#reconnect = false;
-    if (cb) this.socket.on('close', cb);
+    if (cb) this.socket.on("close", cb);
     if (this.#pingInterval) {
       clearInterval(this.#pingInterval);
       this.#pingInterval = null;
@@ -151,8 +152,8 @@ module.exports = WebSocketApi;
  */
 function Deals() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@public.deals.v3.api@BTCUSDT']
+    method: "SUBSCRIPTION",
+    params: ["spot@public.deals.v3.api@BTCUSDT"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -163,8 +164,8 @@ function Deals() {
  */
 function Kline() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@public.kline.v4.api@BTCUSDT@Min15']
+    method: "SUBSCRIPTION",
+    params: ["spot@public.kline.v4.api@BTCUSDT@Min15"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -175,8 +176,8 @@ function Kline() {
  */
 function IncreaseDepth() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@public.increase.depth.v3.api@BTCUSDT']
+    method: "SUBSCRIPTION",
+    params: ["spot@public.increase.depth.v3.api@BTCUSDT"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -187,8 +188,8 @@ function IncreaseDepth() {
  */
 function LimitDepth() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@public.limit.depth.v3.api@BTCUSDT@5']
+    method: "SUBSCRIPTION",
+    params: ["spot@public.limit.depth.v3.api@BTCUSDT@5"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -199,8 +200,8 @@ function LimitDepth() {
  */
 function BookTicker() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@public.bookTicker.v3.api@BTCUSDT']
+    method: "SUBSCRIPTION",
+    params: ["spot@public.bookTicker.v3.api@BTCUSDT"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -212,8 +213,8 @@ function BookTicker() {
  */
 function Account() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@private.account.v3.api']
+    method: "SUBSCRIPTION",
+    params: ["spot@private.account.v3.api"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -225,8 +226,8 @@ function Account() {
  */
 function AccountDeals() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@private.deals.v3.api']
+    method: "SUBSCRIPTION",
+    params: ["spot@private.deals.v3.api"],
   };
   ws.send(JSON.stringify(data));
 }
@@ -238,8 +239,8 @@ function AccountDeals() {
  */
 function Orders() {
   const data = {
-    'method': 'SUBSCRIPTION',
-    'params': ['spot@private.orders.v3.api']
+    method: "SUBSCRIPTION",
+    params: ["spot@private.orders.v3.api"],
   };
   ws.send(JSON.stringify(data));
 }
