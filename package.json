@@ -1,6 +1,6 @@
 {
   "name": "@tsevimli/mexc",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "This is a lightweight library that works as a connector to the MEXC public API.",
   "main": "src/index.js",
   "engines": {
