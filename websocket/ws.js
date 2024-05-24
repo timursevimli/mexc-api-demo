@@ -112,6 +112,14 @@ class WebSocketApi {
     this.#addListener(listener, param);
   }
 
+  priceTickers(tz = "UTC+3", listener = null) {
+    if (!listener) throw new Error("Callback is needed");
+    this.miniTickers(tz, ({ d: data }) => {
+      const results = data.map((item) => ({ price: item.p, symbol: item.s }));
+      listener(results);
+    });
+  }
+
   priceTicker(symbols = "BTCUSDT", tz = "UTC+3", listener = null) {
     if (!listener) throw new Error("Callback is needed");
     this.miniTicker(symbols, tz, (data) => {
