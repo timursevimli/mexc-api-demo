@@ -35,8 +35,9 @@ class WebSocketApi {
   }
 
   #ping() {
+    if (this.#pingInterval) clearInterval(this.#pingInterval);
     this.#pingInterval = setInterval(() => {
-      this.socket.send('{"method":"PING"}');
+      this.socket.ping();
     }, PING_INTERVAL);
   }
 
@@ -66,7 +67,7 @@ class WebSocketApi {
         const data = JSON.parse(chunk.toString("utf8"));
         const channel = data.c;
         if (!channel) return;
-        const listener = this.listeners[channel];
+        const listener = this.listeners[channel] || null;
         if (listener) listener(data);
       });
     } catch {
