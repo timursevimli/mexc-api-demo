@@ -76,53 +76,53 @@ class WebSocketApi {
     }
   }
 
-  deals(symbols = "BTCUSDT", cb = null) {
-    if (!cb) return;
+  deals(symbols = "BTCUSDT", listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     const param = `spot@public.deals.v3.api@${symbols}`;
-    this.#addListener(cb, param);
+    this.#addListener(listener, param);
   }
 
-  kline(symbols, min, cb = null) {
-    if (!cb) return;
+  kline(symbols, min, listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     const param = `spot@public.kline.v4.api@${symbols}@Min${min}`;
-    this.#addListener(cb, param);
+    this.#addListener(listener, param);
   }
 
-  increaseDepth(symbols, cb = null) {
-    if (!cb) return;
+  increaseDepth(symbols, listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     const param = `spot@public.increase.depth.v3.api@${symbols}`;
-    this.#addListener(cb, param);
+    this.#addListener(listener, param);
   }
 
-  limitDepth(symbols, depth, cb = null) {
-    if (!cb) return;
+  limitDepth(symbols, depth, listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     const param = `spot@public.limit.depth.v3.api@${symbols}@${depth}`;
-    this.#addListener(cb, param);
+    this.#addListener(listener, param);
   }
 
-  miniTicker(symbols = "BTCUSDT", tz = "UTC+3", cb = null) {
-    if (!cb) return;
+  miniTicker(symbols = "BTCUSDT", tz = "UTC+3", listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     const param = `spot@public.miniTicker.v3.api@${symbols}@${tz}`;
-    this.#addListener(cb, param);
+    this.#addListener(listener, param);
   }
 
-  priceTicker(symbols = "BTCUSDT", tz = "UTC+3", cb = null) {
-    if (!cb) return;
+  priceTicker(symbols = "BTCUSDT", tz = "UTC+3", listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     this.miniTicker(symbols, tz, (data) => {
-      cb({ price: data.d.p, symbol: data.s });
+      listener({ price: data.d.p, symbol: data.s });
     });
   }
 
-  bookTicker(symbols = "BTCUSDT", cb = null) {
-    if (!cb) return;
+  bookTicker(symbols = "BTCUSDT", listener = null) {
+    if (!listener) throw new Error("Callback is needed");
     const param = `spot@public.bookTicker.v3.api@${symbols}`;
-    this.#addListener(cb, param);
+    this.#addListener(listener, param);
   }
 
-  close(cb = null) {
+  close(listener = null) {
     if (!this.socket) return;
     this.#reconnect = false;
-    if (cb) this.socket.on("close", cb);
+    if (listener) this.socket.on("close", listener);
     if (this.#pingInterval) {
       clearInterval(this.#pingInterval);
       this.#pingInterval = null;
