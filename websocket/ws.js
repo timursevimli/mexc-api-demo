@@ -106,6 +106,12 @@ class WebSocketApi {
     this.#addListener(listener, param);
   }
 
+  miniTickers(tz = "UTC+3", listener = null) {
+    if (!listener) throw new Error("Callback is needed");
+    const param = `spot@public.miniTickers.v3.api@${tz}`;
+    this.#addListener(listener, param);
+  }
+
   priceTicker(symbols = "BTCUSDT", tz = "UTC+3", listener = null) {
     if (!listener) throw new Error("Callback is needed");
     this.miniTicker(symbols, tz, (data) => {
